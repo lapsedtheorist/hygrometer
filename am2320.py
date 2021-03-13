@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Forked from... https://github.com/Gozem/am2320
 
 import posix
 from fcntl import ioctl
