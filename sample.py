@@ -15,6 +15,7 @@ def open_timeseries_database_write(path='hygrometer.db'):
         sql3con = sqlite3.connect(path)
         sql3cur = sql3con.cursor()
         sql3cur.execute('CREATE TABLE timeseries (datetime text, temperature real, humidity real)')
+        sql3cur.execute('CREATE UNIQUE INDEX datetime_idx ON timeseries (datetime DESC)')
         sql3con.commit()
     else:
         sql3con = sqlite3.connect(path)
