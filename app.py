@@ -21,14 +21,24 @@ def open_timeseries_database_read(path):
         sql3cur = sql3con.cursor()
     return (sql3con, sql3cur)
 
-def read_hygrometer(cursor):
-    cursor.execute('SELECT * FROM timeseries ORDER BY datetime LIMIT 300')
-    return cursor.fetchall()
-
-def application(env, start_response):
+def read_hygrometer(limit):
     (sql3con, sql3cur) = open_timeseries_database_read(args.db)
-    data = read_hygrometer(sql3cur)
+    sql3cur.execute('SELECT * FROM timeseries ORDER BY datetime DESC LIMIT :limit', {"limit": limit})
+    data = sql3cur.fetchall()
+    sql3con.close()
+    return data
+
+def recent_data(env, start_response):
+    data = read_hygrometer(limit=300)
     keys = ("datetime", "temperature", "humidity")
     results = [dict(zip(keys, values)) for values in data]
-    start_response('200 OK', [('Content-Type','application/json')])
+    start_response('200 OK', [('Content-Type','application/json; charset=utf-8')])
     return [str.encode(json.dumps(results))]
+
+def application(env, start_response):
+    data = read_hygrometer(limit=1)
+    keys = ("datetime", "temperature", "humidity")
+    results = [dict(zip(keys, values)) for values in data]
+    start_response('200 OK', [('Content-Type','application/json; charset=utf-8')])
+    return [str.encode(json.dumps(results[0]))]
+
