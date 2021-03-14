@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
 from am2320 import AM2320
+import argparse
 from datetime import datetime, timezone
-from pathlib import Path
+import json
+import pathlib
 import sqlite3
 
-# For a Raspberry Pi Zero, the i2c bus will be 0 or 1
-I2C_BUS = 0
+parser = argparse.ArgumentParser(description='Sample the sensors of the Hygrometer')
+parser.add_argument('--i2c', type=int, default=1, choices=[0, 1], help='Which i2c bus to use (default: 1)')
+parser.add_argument('--db', nargs='?', type=pathlib.Path, const='hygrometer.db', help='Use database filepath (default: hygrometer.db)')
+args = parser.parse_args()
 
-def open_timeseries_database_write(path='hygrometer.db'):
+def open_timeseries_database_write(path):
     try:
-        db_path = Path(path).resolve(strict=True)
+        db_path = path.resolve(strict=True)
     except FileNotFoundError:
         sql3con = sqlite3.connect(path)
         sql3cur = sql3con.cursor()
@@ -30,9 +34,12 @@ def sample_hygrometer(device):
 def queue_hygrometer_sample(cursor, datetime, temperature, humidity):
     cursor.execute('INSERT INTO timeseries VALUES (?,?,?)', (datetime, temperature, humidity))
 
-am2320 = AM2320(I2C_BUS)
+am2320 = AM2320(args.i2c)
 (dt, t, h) = sample_hygrometer(am2320)
 
-(sql3con, sql3cur) = open_timeseries_database_write()
-queue_hygrometer_sample(sql3cur, dt, t, h)
-sql3con.commit()
+if args.db is not None:
+    (sql3con, sql3cur) = open_timeseries_database_write(args.db)
+    queue_hygrometer_sample(sql3cur, dt, t, h)
+    sql3con.commit()
+else:
+    print(json.dumps({"datetime": dt, "temperature": t, "humidity": h}))
